@@ -2,13 +2,42 @@
 
 [Agent2Agent (A2A) Crash Course: Full Walkthrough With Real Multi-Agent Examples](https://www.youtube.com/watch?v=mFkw3p5qSuA)
 
-A2A is a standardized protocol that allows AI agents to discover each other, securely exchange information, manage tasks, and collaborate without exposing their internal workings. 
+The Agent-to-Agent (A2A) protocol is new standard for enabling AI agents to communicate with each other regardless of the underlying framework they use. Whether your agents are built with OpenAI Agents SDK, ADK, CrewAI, LangGraph, or any other framework, A2A provides a standardized communication layer. This will increase autonomy and multiply productivity gains, while lowering long-term costs.
 
-It is enabling agents to interoperate with each other, even if they were built by different vendors or in a different framework - this will increase autonomy and multiply productivity gains, while lowering long-term costs.
+> [Google Cloud has donated A2A to the Linux Foundation](https://developers.googleblog.com/en/google-cloud-donates-a2a-to-linux-foundation/)! A2A is now an open, vendor-neutral standard backed by Amazon Web Services, Cisco, Google, Microsoft, Salesforce, SAP, and ServiceNow etc.
 
 ---
 
-## 1. Why A2A?
+## Why A2A Protocol?
+
+### The Problem Without A2A
+
+Imagine you have a personal assistant agent that needs to:
+
+- Book a hotel through a hotel booking agent
+- Rent a car through a car rental agent
+- Get weather information from a weather agent
+
+Without A2A, for each agent you want to communicate with, you need to:
+
+- Figure out what the agent can do
+- Understand what format of information to send (audio, text, JSON?)
+- Learn what kind of response to expect
+- Build custom tools and wrappers for each agent
+
+This creates redundant work and complexity as you scale to more agents.
+
+### The Solution With A2A
+
+A2A standardizes agent communication by providing:
+
+- Uniform discovery: Standard way to find out what agents can do
+- Consistent messaging: Standardized message format across all agents
+- Framework agnostic: Works with any AI framework underneath
+- Scalable architecture: Easy to add new agents without custom integration
+
+## 1. What Value is A2A Providing?
+
 - Interoperability & opacity – Agents running on different stacks can cooperate without leaking internal prompts, weights, or tool code.
 
 - Async-first design – Long tasks, human-in-the-loop approvals, and incremental artefact uploads are first-class citizens.
@@ -20,6 +49,7 @@ It is enabling agents to interoperate with each other, even if they were built b
 ---
 
 ## 📐 Design Principles
+
 Here’s a polished and integrated **Design Principles** section for your A2A learning guide, drawing directly from official sources:
 
 ### 1. **Embrace agentic capabilities**
@@ -55,110 +85,89 @@ The protocol doesn’t limit agents to plain text. Whether it’s **audio, video
 ## Core Concepts
 
 ### 1. Agent Discovery
-Agents find each other using **Agent Cards**, JSON files hosted at a well-known URI (e.g., `/.well-known/agent.json`). These cards detail an agent’s capabilities and how to connect.
 
-### 2. Message Exchange
-Agents send **Messages** with **Parts** (text, data, or files). The client uses the role `"user"`, and the server uses `"agent"`, even in agent-to-agent communication. For Parts explanation see below.
+Agents find each other using **Agent Cards**, JSON files hosted at a well-known URI (e.g., `/.well-known/agent-card.json`). These cards detail an agent’s capabilities and how to connect.
 
-### 3. Task Management
-Tasks are created to handle requests, with states like `working`, `completed`, or `input-required`. Clients can poll task status or receive updates via streaming or notifications.
+#### 1. Agent Cards
 
-### 4. Artifacts
-Outputs (file, text, data) streamed or returned when complete
+Think of agent cards as business cards for AI agents. Each agent publishes a card that includes:
 
----
-## Example: Full Agent Card JSON
+- Name: The agent's identifier
+- Description: High-level overview of what the agent does
+- URL: Where the agent is hosted
+- Input/Output modes: Supported data types (text, audio, etc.)
+- Skills: Specific capabilities the agent offers
+- Example queries: Sample requests the agent can handle
 
-The **Agent Card** is a JSON document hosted at a well-known URI (e.g., `/.well-known/agent.json`) that enables agent discovery by advertising an agent’s identity, capabilities, and connection details. Below is an example of a complete Agent Card JSON, including all possible fields as defined by the A2A protocol.
-
-### Agent Card Structure
-- **`name`**: A human-readable name for the agent.
-- **`url`**: The base URL for the agent’s A2A endpoint (e.g., where `message/send` or `message/stream` requests are sent).
-- **`capabilities`**: An object describing supported features, such as streaming or push notifications.
-- **`skills`**: An array of specific tasks or functions the agent can perform (e.g., "weather_forecast", "document_summary").
-- **`defaultInputModes`**: An array of MIME types the agent accepts as input (e.g., `text/plain`, `application/json`).
-- **`defaultOutputModes`**: An array of MIME types the agent can produce as output.
-- **`authenticationMethods`**: An array of supported authentication schemes (e.g., OAuth2, JWT, API Key).
-- **`uiHints`**: Optional rendering preferences for client-side interfaces (e.g., iframe, video player).
-- **`version`**: The A2A protocol version supported by the agent.
-- **`contact`**: Optional contact information for the agent’s maintainer (e.g., email or website).
-- **`description`**: A brief description of the agent’s purpose or functionality.
-
-### Example Agent Card
-This example represents a weather forecasting agent with comprehensive capabilities and configuration.
+Example agent card structure:
 
 ```json
 {
-  "name": "Weather Forecasting Agent",
-  "url": "https://weather-agent.example.com/a2a/v1",
-  "capabilities": {
-    "streaming": true,
-    "pushNotifications": true,
-    "longRunningTasks": true,
-    "humanInLoop": true
-  },
+  "name": "Hotel Booking Agent",
+  "description": "Personal concierge for booking and managing hotel reservations",
+  "url": "localhost:1003",
   "skills": [
-    "weather_forecast",
-    "climate_analysis",
-    "historical_weather_data"
-  ],
-  "defaultInputModes": [
-    "text/plain",
-    "application/json",
-    "text/csv"
-  ],
-  "defaultOutputModes": [
-    "application/json",
-    "text/plain",
-    "text/html"
-  ],
-  "authenticationMethods": [
     {
-      "type": "oauth2",
-      "authorizationUrl": "https://auth.example.com/oauth/authorize",
-      "tokenUrl": "https://auth.example.com/oauth/token",
-      "scopes": ["weather:read", "weather:forecast"]
+      "name": "book_room",
+      "description": "Book a hotel room for specified dates"
     },
     {
-      "type": "bearer",
-      "jwksUrl": "https://weather-agent.example.com/.well-known/jwks.json"
-    },
-    {
-      "type": "apiKey",
-      "headerName": "X-Api-Key"
+      "name": "check_availability",
+      "description": "Check room availability for given dates"
     }
   ],
-  "uiHints": {
-    "preferredRenderModes": [
-      "text",
-      "iframe",
-      "video"
-    ],
-    "iframeOptions": {
-      "width": "100%",
-      "height": "400px",
-      "allow": "fullscreen"
-    }
-  },
-  "version": "0.2.2",
-  "contact": {
-    "email": "support@weather-agent.example.com",
-    "website": "https://weather-agent.example.com"
-  },
-  "description": "A specialized agent for providing real-time weather forecasts, climate analysis, and historical weather data for global locations."
+  "examples": [
+    "Book a room for this weekend",
+    "Are there any king suites available?"
+  ]
 }
 ```
 
-### Usage
-- **Discovery**: A client agent fetches this Agent Card via a GET request to `https://weather-agent.example.com/.well-known/agent.json` to learn how to interact with the weather agent.
-- **Interoperability**: The `skills` and `defaultInputModes`/`defaultOutputModes` fields help the client determine if the agent can handle specific tasks (e.g., JSON-based weather forecasts).
-- **Security**: The `authenticationMethods` field guides the client on how to authenticate requests (e.g., using OAuth2 or a bearer token).
-- **UI Rendering**: The `uiHints` field suggests how outputs should be displayed, such as rendering forecast data in an iframe or as plain text.
+### 2. Message and Tasks
 
-This Agent Card ensures that client agents can discover and collaborate with the weather agent efficiently, securely, and with optimal user experience integration.
+A2A uses two main communication types:
 
+1. Messages: For quick, immediate responses. Messages contain:
+   - Role: Who sent it (user, agent, etc.)
+   - Parts: The actual content (text, audio, etc.)
+   - Metadata: Message ID, task ID, context ID for state management
 
----
+Tasks: For long-running operations that take time to complete. Tasks include: - Artifacts: Where the agent stores its work output - Status: Current state (submitted, in-progress, completed, failed)
+
+- Updates: Real-time status changes
+
+Tasks are created to handle requests, with states like `working`, `completed`, or `input-required`. Clients can poll task status or receive updates via streaming or notifications.
+
+Artifacts Outputs (file, text, data) streamed or returned when complete
+
+### 3. Agent Executor
+
+A wrapper class that standardizes how agents receive and process requests. Every A2A-compliant agent must implement:
+
+- execute(): Processes incoming requests
+- cancel(): Handles cancellation requests
+
+The agent executor bridges the gap between A2A's standard interface and your specific agent framework.
+
+## Understanding A2A Fundamentals
+
+### Basic Workflow
+
+1. Discovery: Client agent fetches agent cards from remote agents
+2. Selection: Based on capabilities, client chooses appropriate agent
+3. Communication: Client sends standardized messages via HTTP/HTTPS
+4. Processing: Remote agent processes request through agent executor
+5. Response: Remote agent returns standardized message or task
+
+### Communication Flow Example
+
+Personal Agent → Hotel Agent
+
+1. GET /well-known/agents.json (fetch agent card)
+2. POST /messages (send booking request)
+3. Response: Message with booking confirmation
+
+The A2A protocol represents an important step toward more collaborative and interoperable AI agent ecosystems, enabling developers to focus on building great agents rather than worrying about integration complexity.
 
 ## 🛠️ How A2A Works
 
@@ -166,7 +175,7 @@ A2A enables seamless, secure collaboration between a **Client Agent** (who initi
 
 ### 1. Capability Discovery
 
-Each remote agent exposes an **Agent Card**—a JSON file (typically at `/.well-known/agent.json`) that declares its skills, supported input/output types, UI modalities, and authentication methods. Client agents fetch these cards to find the right specialist agent for a task.
+Each remote agent exposes an **Agent Card**—a JSON file (typically at `/.well-known/agent-card.json`) that declares its skills, supported input/output types, UI modalities, and authentication methods. Client agents fetch these cards to find the right specialist agent for a task.
 
 ---
 
@@ -193,7 +202,7 @@ Each message part indicates its content type and optional UI hints. This allows 
 
 | Step                        | Description                                                                                    |
 | --------------------------- | ---------------------------------------------------------------------------------------------- |
-| 1. Discovery                | Client fetches the Agent Card to learn capabilities and connection details.   |
+| 1. Discovery                | Client fetches the Agent Card to learn capabilities and connection details.                    |
 | 2. Initiation               | Client sends a task via `message/send` or starts streaming with `message/stream`.              |
 | 3. Execution                | Remote agent updates task state, streaming progress via SSE or pushing via webhooks.           |
 | 4. Collaboration (Optional) | If input is needed, remote agent flags `input-required`, prompting additional messages.        |
@@ -201,393 +210,321 @@ Each message part indicates its content type and optional UI hints. This allows 
 
 ---
 
-
-## Example: Travel Agent and Weather Agent Collaboration
-
-Let’s walk through an example where **Agent A** (a travel planning agent) communicates with **Agent B** (a weather forecasting agent) to get a weather forecast for Paris.
-
-### Step 1: Discover Agent B
-Agent A fetches Agent B’s Agent Card to learn its endpoint and capabilities.
-
-**Request**:
-```http
-GET https://agent-b.example.com/.well-known/agent.json HTTP/1.1
-Host: agent-b.example.com
-```
-
-**Response**:
-```json
-{
-  "name": "Weather Forecasting Agent",
-  "url": "https://agent-b.example.com/a2a/v1",
-  "capabilities": {
-    "streaming": true,
-    "pushNotifications": true
-  },
-  "defaultInputModes": ["text/plain"],
-  "defaultOutputModes": ["application/json"]
-}
-```
-
-- Agent A now knows to send requests to `https://agent-b.example.com/a2a/v1`.
-
-### Step 2: Request a Weather Forecast
-Agent A sends a message to Agent B, asking for a forecast and providing structured data.
-
-**Request**:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "message/send",
-  "params": {
-    "message": {
-      "role": "user",
-      "parts": [
-        {
-          "kind": "text",
-          "text": "Provide a weather forecast."
-        },
-        {
-          "kind": "data",
-          "data": {
-            "location": "Paris",
-            "dates": {
-              "start": "2023-10-01",
-              "end": "2023-10-07"
-            }
-          }
-        }
-      ],
-      "messageId": "msg-001"
-    }
-  }
-}
-```
-
-### Step 3: Agent B Responds with a Task
-Agent B processes the request and returns a task with the forecast.
-
-**Response** (immediate completion):
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "id": "task-001",
-    "contextId": "ctx-001",
-    "status": {
-      "state": "completed"
-    },
-    "artifacts": [
-      {
-        "artifactId": "art-001",
-        "parts": [
-          {
-            "kind": "data",
-            "data": {
-              "forecast": [
-                {"date": "2023-10-01", "temperature": 20, "condition": "sunny"},
-                {"date": "2023-10-02", "temperature": 18, "condition": "cloudy"}
-              ]
-            }
-          }
-        ]
-      }
-    ],
-    "kind": "task"
-  }
-}
-```
-
-- Agent B returns the forecast in a `data` part, which Agent A can use to plan the trip.
-
-### Alternative: Long-Running Task with Polling
-If the forecast takes time, Agent B might return a `working` task:
-
-**Initial Response**:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "id": "task-001",
-    "contextId": "ctx-001",
-    "status": {
-      "state": "working"
-    },
-    "kind": "task"
-  }
-}
-```
-
-Agent A then polls for updates:
-
-**Polling Request**:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "tasks/get",
-  "params": {
-    "id": "task-001"
-  }
-}
-```
-
-**Final Response** (when completed):
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "result": {
-    "id": "task-001",
-    "contextId": "ctx-001",
-    "status": {
-      "state": "completed"
-    },
-    "artifacts": [
-      {
-        "artifactId": "art-001",
-        "parts": [
-          {
-            "kind": "data",
-            "data": {
-              "forecast": [
-                {"date": "2023-10-01", "temperature": 20, "condition": "sunny"},
-                {"date": "2023-10-02", "temperature": 18, "condition": "cloudy"}
-              ]
-            }
-          }
-        ]
-      }
-    ],
-    "kind": "task"
-  }
-}
-```
-
----
-
-## Why This Matters
-
-This example shows how agents can collaborate: Agent A (travel planner) relies on Agent B (weather forecaster) to provide critical data, demonstrating A2A’s power in enabling specialized agents to work together. The use of structured `data` parts ensures machine-readable communication, ideal for agent-to-agent interactions.
-
----
-
-### What are Parts?
-
-In the Google Agent-to-Agent (A2A) Protocol, **Parts** are components of a **Message** used to structure and transmit content between agents. Here's a clear explanation of "Parts":
-
-- **Parts** are individual pieces of content within a Message, allowing agents to send multiple types of data (e.g., text, structured data, files, or media) in a single conversational turn.
-- Each Part is a self-contained unit with a specific **kind** (type) and associated content, enabling flexible and multimodal communication.
-- Parts are included in the `parts` array of a Message, which has a `role` (either `"user"` for the client or `"agent"` for the server).
-
-### Key Characteristics of Parts
-1. **Modularity**: Parts allow Messages to carry diverse content types, such as text snippets, images, or JSON data, in a single exchange.
-2. **Content Type Specification**: Each Part specifies its `kind` (e.g., `"text"`, `"data"`, `"file"`) to indicate the type of content it contains.
-3. **UI Hints**: Parts may include optional UI hints to guide how the content should be rendered on the client side (e.g., as text, an iframe, or a video player).
-4. **Machine-Readable**: Structured Parts (e.g., `"data"`) ensure content is easily processed by other agents, supporting automation and interoperability.
-
-### Structure of a Part
-A Part typically includes:
-- **`kind`**: The type of content (e.g., `"text"`, `"data"`, `"file"`).
-- **Content**: The actual data, which varies by kind:
-  - For `"text"`, a `text` field contains a string.
-  - For `"data"`, a `data` field contains structured data (e.g., JSON).
-  - For `"file"`, a reference to a file (e.g., a pre-signed URL).
-- **Optional Fields**: May include UI hints or metadata for rendering or processing.
-
-### Example from the Document
-In the **Travel Agent and Weather Agent Collaboration** example, Agent A sends a Message to Agent B with two Parts:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "message/send",
-  "params": {
-    "message": {
-      "role": "user",
-      "parts": [
-        {
-          "kind": "text",
-          "text": "Provide a weather forecast."
-        },
-        {
-          "kind": "data",
-          "data": {
-            "location": "Paris",
-            "dates": {
-              "start": "2023-10-01",
-              "end": "2023-10-07"
-            }
-          }
-        }
-      ],
-      "messageId": "msg-001"
-    }
-  }
-}
-```
-
-- **First Part**: A `"text"` Part with the instruction "Provide a weather forecast."
-- **Second Part**: A `"data"` Part with structured JSON specifying the location ("Paris") and date range for the forecast.
-
-Agent B responds with a Task containing an **Artifact** that includes a Part:
-
-```json
-{
-  "kind": "data",
-  "data": {
-    "forecast": [
-      {"date": "2023-10-01", "temperature": 20, "condition": "committed"},
-      {"date": "2023-10-02", "temperature": 18, "condition": "completed"}
-    ]
-  }
-}
-```
-
-- This Part contains the weather forecast as structured JSON data in a `"data"` Part.
-
-### Role in A2A Communication
-- **Collaboration**: Parts enable agents to exchange rich, structured information, such as asking clarifying questions or sharing intermediate results.
-- **Flexibility**: By supporting multiple Parts in a single Message, agents can handle complex, multimodal tasks (e.g., combining text instructions with images or data).
-- **Interoperability**: The use of standardized Part kinds ensures that agents built by different vendors can understand and process the content.
-- **User Experience**: UI hints in Parts allow agents to negotiate how content is displayed in the client’s interface, enhancing adaptability.
-
-### Summary
-Parts are the building blocks of Messages in the A2A protocol, enabling agents to send diverse, structured, and multimodal content in a single exchange. They are defined by their `kind` and content, support machine-readable formats, and facilitate collaboration by allowing agents to share text, data, files, or media with optional UI rendering guidance.
-
-
----
-
-## Basic interaction – `message/send`
-
-**Client → Server**
-
-```http
-POST /agent HTTP/1.1
-Content-Type: application/json
-Accept: application/json
-{
-  "jsonrpc": "2.0",
-  "method": "message/send",
-  "id": 1,
-  "params": {
-    "message": {
-      "role": "user",
-      "parts": [{ "type": "text", "text": "Summarise Q2 board deck" }]
-    }
-  }
-}
-```
-
-**Server → Client** – single JSON response:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "taskId": "t-123",
-    "status": { "state": "working" }
-  }
-}
-```
-
-Use `tasks/get` to poll until `status.state` becomes `"completed"`.([google-a2a.github.io][1])
-
----
-
-## Real-time streaming – `message/stream`
-
-Same request body, but call `message/stream` and set `Accept: text/event-stream`.
-Server keeps the connection open and emits events:
-
-```
-data: {"jsonrpc":"2.0","id":1,
-       "result":{"kind":"status-update","status":{"state":"working"}}}
-
-data: {"jsonrpc":"2.0","id":1,
-       "result":{"kind":"artifact-update","artifact":{"mime":"text/markdown","parts":[...]}}}
-
-data: {"jsonrpc":"2.0","id":1,
-       "result":{"kind":"status-update","status":{"state":"completed"},"final":true}}
-```
-
-*If the socket drops before `final:true`, call `tasks/resubscribe` to continue.
-
----
-
-## Asynchronous workflows – Push notifications
-
-1. **Client supplies a webhook** in either the initial send/stream call or later via `tasks/pushNotificationConfig/set`.
-2. **Server verifies** the URL (challenge-response) and authenticates using JWT, API-Key, or HMAC as requested.([google-a2a.github.io][2])
-3. **On major state changes** (e.g., `completed`, `input-required`) the server POSTs a minimal payload to the webhook.
-4. Client validates signature/token, then calls `tasks/get` to fetch the full Task object.
-
-Why JWT + JWKS?  – lets servers rotate keys without breaking receivers.([google-a2a.github.io][2], [googlecloudcommunity.com][6])
-
----
-
-## Task management API surface
-
-| Method              | Purpose              | Typical use                 | Notes                                                           |
-| ------------------- | -------------------- | --------------------------- | --------------------------------------------------------------- |
-| `tasks/get`         | Poll task state      | Mobile / serverless clients | Returns full `Task`.                |
-| `tasks/cancel`      | Attempt cancellation | User abort, quota limit     | May return `TaskNotCancelableError`. |
-| `tasks/resubscribe` | Re-join SSE stream   | Network hiccup              | Requires `capabilities.streaming`.   |
-
-Error codes follow JSON-RPC plus A2A-specific codes (`-32001` TaskNotFound, etc.).
-
----
-
-## Security checklist
-
-| Threat                  | Mitigation                                                                                                            |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **Webhook SSRF**        | Allow-list or challenge the client-supplied URL.([google-a2a.github.io][2])                                           |
-| **Impersonated Server** | Use TLS + optional mTLS; verify JWT issuer/audience claims. |
-| **Replay attacks**      | Include `iat` and `jti` in signed notifications; reject stale timestamps.)                  |
-| **Secret rotation**     | Host JWKS endpoint and use `kid` header for key discovery.                                 |
-
----
-
-## End-to-end stream example (Hello World stream)
-
-1. **Start server** (from samples above).
-2. **Send request**:
-
-```bash
-curl -N -H "Content-Type: application/json" \
-     -H "Accept: text/event-stream" \
-     -d @hello.json http://localhost:8000/agent
-```
-
-`hello.json`:
-
-```json
-{"jsonrpc":"2.0","method":"message/stream","id":"42",
- "params":{"message":{"role":"user","parts":[{"type":"text","text":"Hello!"}]}}}
-```
-
-3. **Watch SSE**: you’ll see `status-update` then `artifact-update` lines until `final:true`, after which the server closes the stream.
-
----
-
 ## How A2A differs from MCP (one-liner)
 
-MCP is **agent ↔ front-end**; A2A is **agent ↔ agent**.  Both reuse JSON-RPC over HTTP and SSE, but A2A layers discovery (Agent Card), task lifecycle, and push-notification workflows specialised for peer-to-peer collaboration.
+MCP is **agent ↔ context**; A2A is **agent ↔ agent**. Both reuse JSON-RPC over HTTP and SSE, but A2A layers discovery (Agent Card), task lifecycle, and push-notification workflows specialised for peer-to-peer collaboration.
 
 ---
 
-## Next Steps
+## If use the agent to agent protocol to wrap a ai agent, is it stateful as per the a2a protocl?
 
-Experiment with A2A by:
-- Adding streaming with `message/stream` for real-time updates.
-- Using push notifications for asynchronous tasks.
-- Creating your own agents and Agent Cards.
+In the **Agent-to-Agent (A2A) protocol**, whether the wrapped AI agent is _stateful_ depends on how the underlying agent is implemented, not just on the protocol itself.
+
+Here’s the breakdown:
+
+- **The A2A protocol core itself is stateless by design.**
+  It’s essentially a standardized message-passing interface — think of it like HTTP for agents. Each request from one agent to another is self-contained, carrying all the context needed for the receiving agent to respond. The protocol doesn’t require the receiver to remember anything from past interactions, and any “state” identifiers (`taskId`, `contextId`, etc.) are just metadata — the protocol doesn’t persist them automatically.
+
+- **Statefulness comes from the agent implementation, task store or memory layer.**
+  When wrapped AI agent keeps its own memory (session variables, conversation history, knowledge store, etc.) and uses some form of session ID or conversation context to retrieve that making wrapped agent will behave _statefully_ across A2A calls.
+
+  Additionally if the runtime hosting your agent uses a **TaskStore** (in-memory or persistent) or other memory backend, it can link multiple messages together into a single _ongoing_ task. This is what enables **multi-turn conversations** and intermediate states like `"input-required"`.
+
+  If it doesn’t keep memory, then each A2A call will be _stateless_, even if the protocol is the same.
+
+- **Statefulness comes from the agent’s task store or memory layer.**
+  If the runtime hosting your agent uses a **TaskStore** (in-memory or persistent) or other memory backend, it can link multiple messages together into a single _ongoing_ task. This is what enables **multi-turn conversations** and intermediate states like `"input-required"`.
+  Without such a store, each A2A call is processed independently — even if it carries a `taskId`.
+
+- **Typical patterns:**
+
+  1. **Stateless** — Every request contains the full context (prompt + data) needed for the agent to respond. No `taskId` or history retrieval is involved.
+  2. **Stateful** — The request includes a `taskId` and/or `contextId` that the agent runtime uses to fetch stored conversation state or task progress from a backend store.
+
+**Bottom line:**
+
+A2A ≠ stateful by default — but it is **state-friendly by design**. You _can_ make it stateful by designing your agent to persist and retrieve context between calls.
+
+Its message format includes IDs and metadata so that implementations _can_ maintain state if they choose. The LangGraph examples show this in action: they store state in a `TaskStore` and resume work when the same IDs come back in later calls.
+
+Think of A2A like a phone line: it doesn’t “remember” your last conversation, but you can still call the same person who keeps a diary of what you talked about. 📒📞 Recipient _can_ look up past notes if they want.
+
+### Example
+
+Here’s a **side-by-side diagram** showing how **pure A2A (stateless)** differs from **A2A + TaskStore (stateful)**, based the official A2A LangGraph example.
+
+---
+
+```
+          ┌───────────────────────────────┐
+          │     Pure A2A (Stateless)       │
+          └───────────────────────────────┘
+         ┌─────────────┐       ┌─────────────┐
+User →→→ │   A2A Msg    │ →→→  │   Agent      │
+         │ (no task ID) │       │ Runtime     │
+         └─────────────┘       └─────────────┘
+                 │                     │
+                 │ No stored state     │
+                 │                     │
+                 ▼                     ▼
+         Each call processed      Agent has no
+         in isolation — no        memory of past
+         conversation history     interactions
+
+Example:
+User: "Book a flight."
+Agent: "Where to?"
+Next call: Agent forgets the first question.
+```
+
+---
+
+```
+      ┌─────────────────────────────────────────┐
+      │    A2A + TaskStore (Stateful Behavior)   │
+      └─────────────────────────────────────────┘
+         ┌─────────────┐        ┌────────────────┐
+User →→→ │  A2A Msg     │  →→→   │   Agent        │
+         │ (taskId +    │        │  Runtime       │
+         │ contextId)   │        │  + TaskStore   │
+         └─────────────┘        └────────────────┘
+                │                         │
+                │ Uses IDs to look up     │
+                │ conversation/task state │
+                ▼                         ▼
+          Runtime fetches          Agent continues
+          stored history           the same conversation
+          from TaskStore           seamlessly
+
+Example:
+Turn 1:
+User: "Book a flight."
+Agent: "Where to?"
+(TASK CREATED: id=123)
+
+Turn 2:
+User (taskId=123): "From JFK to LHR, Oct 10."
+Agent: "Booked. Confirmation XYZ."
+```
+
+---
+
+### Key Differences
+
+| Feature                       | Pure A2A (Stateless) | A2A + TaskStore (Stateful)       |
+| ----------------------------- | -------------------- | -------------------------------- |
+| Remembers past turns?         | ❌ No                | ✅ Yes                           |
+| Needs full context each call? | ✅ Yes               | ❌ No (can rely on stored state) |
+| Protocol changes?             | ❌ Same A2A format   | ❌ Same A2A format               |
+| Extra component?              | ❌ None              | ✅ TaskStore / memory backend    |
+
+![alt text](./public/image.png)
+
+Learning Resources:
+
+- https://chatgpt.com/share/689ea4a7-44d4-8002-b66d-c001f0459357
+- https://a2a-protocol.org/latest/specification/#94-multi-turn-interaction-input-required
+- https://a2a-protocol.org/latest/tutorials/python/7-streaming-and-multiturn/#key-features-demonstrated
+
+---
+
+## A2A Learning Path 🛠️
+
+### **Phase 0: A2A Transport Specification (Step 0)**
+
+_Master A2A transport layer specifications before implementation_
+
+```
+00_protocol_transports_spec/    # A2A Protocol Transport Specifications
+                               # - Transport layer requirements (HTTPS mandatory)
+                               # - JSON-RPC 2.0, gRPC, HTTP+JSON specifications
+                               # - Message formats across transport protocols
+                               # - Security constraints and compliance strategies
+```
+
+### **Phase 1: A2A Fundamentals (Step 1)**
+
+_Discovery, agent cards, skills, and ecosystem understanding_
+
+```
+01_a2a_fundamentals/        # Complete A2A discovery system
+                           # - Agent cards and capabilities
+                           # - Skills definition and examples
+                           # - Multiple agent ecosystem
+                           # - Visual browser examples
+```
+
+### **Phase 2: Core A2A Protocol (Steps 2-4)**
+
+_Build the fundamental A2A communication patterns_
+
+```
+02_agent_executor/          # Agent executor pattern (execute/cancel)
+03_client_messaging/        # Client discovery & messaging (merged step)
+04_streaming_and_tasks/     # Server-sent events & task management
+```
+
+### **Phase 3: Multi-Agent Orchestration (Step 5)** ⭐
+
+_The main event - complete multi-agent system_
+
+```
+05_multi_agent_systems/     # Host + 3 remotes (ADK/CrewAI/LangGraph)
+                           # Complete Table Tennis scheduling demo
+                           # ★ This is the "wow" moment ★
+```
+
+### **Phase 4: Enterprise Production (Steps 6-13)**
+
+_Security, performance, and protocol convergence_
+
+```
+06_push_notifications/      # Async webhooks for disconnected scenarios
+07_multi_turn_conversations/# Context persistence & referenceTaskIds
+08_authentication/          # OAuth2, JWT, API keys, JWKS
+09_mcp_a2a_bridge/          # MCP-A2A protocol convergence (MCPAgent pattern)
+10_grpc_production/         # Dual transport, monitoring, CI/CD deployment
+11_multiple_cards/          # Advanced agent card patterns
+12_security_hardening/      # TLS/mTLS, signed cards, replay protection
+```
+
+## 🚀 The Multi-Agent Demo (Step 5)
+
+**Scenario**: Schedule a game with friends across different AI frameworks
+
+```
+┌─────────────────┐    A2A     ┌──────────────────┐
+│   Host Agent    │◄────────────►│                 │
+│                 │             │  Calendar Agent  │
+│  Orchestrator   │             └──────────────────┘
+│                 │    A2A     ┌──────────────────┐
+│ - Discovery     │◄────────────►│                 │
+│ - Scheduling    │             │  Calendar Agent  │
+│ - Court Booking │             └──────────────────┘
+│                 │    A2A     ┌──────────────────┐
+│                 │◄────────────►│                 │
+└─────────────────┘             │  Calendar Agent  │
+                                └──────────────────┘
+
+User: "What time is everyone available tomorrow for Table Tennis?"
+
+Host Agent:
+1. 🔍 Discovers remote agents via Agent Cards
+2. 📤 Sends A2A messages to all 3 agents in parallel
+3. 📨 Collects availability responses
+4. 🏓 Checks court availability using local tools
+5. ⏰ Suggests optimal time slot
+6. ✅ Books court when user confirms
+
+Response: "Everyone is available tomorrow at 8 PM, and I've booked Court 1!"
+```
+
+## 📚 Step-by-Step Learning Goals
+
+| Step   | Focus                    | Key Concepts                        | Framework                | Time     | Testing              |
+| ------ | ------------------------ | ----------------------------------- | ------------------------ | -------- | -------------------- |
+| **00** | Protocol Transport Spec  | HTTPS, JSON-RPC 2.0, gRPC specs     | Specification Study      | 1hr      | Spec comprehension   |
+| **01** | A2A Fundamentals         | Agent cards, skills, ecosystem      | Static JSON + Python     | 2hrs     | Browser + curl       |
+| **02** | Agent Executor           | execute(), cancel(), RequestContext | Python A2A               | 2hrs     | curl + test script   |
+| **03** | Client Messaging         | Discovery, messaging, A2A client    | Python A2A               | 3hrs     | curl + test script   |
+| **04** | Streaming & Tasks        | SSE, status updates, artifacts      | Python A2A               | 3hrs     | curl + browser       |
+| **05** | **Multi-Agent Systems**  | **Host + 3 remotes, orchestration** | **ADK/CrewAI/LangGraph** | **6hrs** | **Multi-agent demo** |
+| **06** | Push Notifications       | Webhooks, async, disconnected       | Python A2A               | 3hrs     | Webhook test         |
+| **07** | Multi-Turn Conversations | contextId, referenceTaskIds, memory | Python A2A               | 3hrs     | Conversation test    |
+| **08** | Authentication           | OAuth2, JWT, API keys, JWKS         | Python A2A               | 4hrs     | Secure client test   |
+| **09** | **MCP-A2A Bridge**       | **Unified MCP+A2A protocols**       | **Python A2A + MCP**     | **4hrs** | **Protocol bridge**  |
+| **10** | gRPC + Production        | Dual transport, monitoring, CI/CD   | Python A2A + gRPC        | 6hrs     | Production deploy    |
+| **11** | Multiple Cards           | Advanced agent card patterns        | Python A2A               | 2hrs     | Card browser test    |
+| **12** | Latency Routing          | Health checks, fastest selection    | Python A2A               | 3hrs     | Performance test     |
+| **13** | Security Hardening       | TLS/mTLS, signed cards, replay      | Python A2A               | 4hrs     | Security audit       |
+
+## 🎯 Learning Outcomes by Phase
+
+### **After Phase 0 (Step 0)**: A2A Transport Specification Foundation
+
+- ✅ Understand A2A transport layer specifications and HTTPS requirements
+- ✅ Master JSON-RPC 2.0, gRPC, and HTTP+JSON transport protocols
+- ✅ Comprehend message format standards across transport layers
+- ✅ Plan transport selection strategy for A2A-compliant implementations
+
+### **After Phase 1 (Step 1)**: A2A Fundamentals
+
+- ✅ Understand complete A2A discovery system
+- ✅ Design agent cards with skills and capabilities
+- ✅ Navigate multi-agent ecosystems
+- ✅ Implement visual browser examples
+
+### **After Phase 2 (Steps 2-4)**: Protocol Mastery
+
+- ✅ Build A2A-compliant agents from scratch
+- ✅ Handle all core A2A methods (message/send, message/stream, tasks/\*)
+- ✅ Implement client discovery and messaging patterns
+- ✅ Master streaming and task management
+
+### **After Phase 3 (Step 5)**: Multi-Agent Systems ⭐
+
+- ✅ **Complete working multi-agent demo**
+- ✅ **Cross-framework integration** (ADK + CrewAI + LangGraph)
+- ✅ **Real-world orchestration** patterns
+- ✅ **Framework independence** proven
+
+### **After Phase 4 (Steps 6-13)**: Production Ready + Protocol Convergence
+
+- ✅ Enterprise security and authentication
+- ✅ Multi-turn conversation capabilities
+- ✅ Performance optimization and monitoring
+- ✅ Production deployment with CI/CD
+- ✅ Advanced agent card patterns
+- ✅ **MCP-A2A protocol bridging and convergence**
+- ✅ **Unified context-collaboration agent architectures**
+- ✅ Security hardening and threat protection
+- ✅ Troubleshooting and best practices
+
+## 💡 Why This Approach Works
+
+### **1. Comprehensive Foundation Strategy**
+
+- **Traditional**: Learn protocol → Learn tools → Maybe build multi-agent
+- **Our approach**: **Complete fundamentals** → Build communication → **Multi-agent immediately** → Add enterprise features
+
+### **2. Framework Agnostic Proof**
+
+Step 5 demonstrates A2A's core value:
+
+### **3. Comprehensive Foundation**
+
+- Step 0: Transport theory foundation before any implementation
+- Step 1: Complete A2A fundamentals in one cohesive lesson
+- No complex setup required initially
+- See full discovery ecosystem before protocol complexity
+
+### **4. Progressive Complexity with Protocol Convergence**
+
+- **Traditional**: Learn protocol → Learn tools → Maybe build multi-agent
+- **Our approach**: **A2A transport specs** → **Complete fundamentals** → **Build communication** → **Multi-agent immediately** → **Add enterprise features** → **Protocol convergence**
+
+### **5. Future-Ready Architecture**
+
+- Step 0: A2A transport specification foundation before implementation
+- Step 1: Complete A2A fundamentals in one cohesive lesson
+- Step 7: Multi-turn conversations with context persistence
+- Step 9: **MCP-A2A bridge** representing the evolution of agent protocols
+- Step 13: Advanced security hardening as final defense layer
+- No complex setup required initially
+- See full discovery ecosystem before protocol complexity
+
+### **6. v3.0+ Feature Complete**
+
+- gRPC dual transport for performance
+- Multi-turn conversation capabilities
+- Signed agent cards for security
+- Latency-aware routing for optimization
+- **MCP-A2A protocol convergence**
+- **Unified context-collaboration architectures**
+- Advanced security hardening
+- Enterprise deployment patterns
+
+---
 
 For more details, see the [A2A specification](https://google-a2a.github.io/A2A/specification/).
 
@@ -598,8 +535,4 @@ For more details, see the [A2A specification](https://google-a2a.github.io/A2A/s
 [5]: https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/?utm_source=chatgpt.com "Announcing the Agent2Agent Protocol (A2A)"
 [6]: https://medium.com/design-bootcamp/breaking-down-ai-silos-how-agent2agent-enables-agent-collaboration-d4951b0a2293?utm_source=chatgpt.com "Breaking down AI silos: how Agent2Agent enables agent collaboration"
 
-
-
-
 ---
-
